@@ -1,5 +1,5 @@
- FC=gfortran-5  -Wall -O3 -w 
- FLAGS=-frecord-marker=4 -DVERBOSE=1 -x f95-cpp-input  
+ FC=gfortran-6  -Wall -O3 -w 
+ FLAGS=-frecord-marker=4 -DVERBOSE=1 -x f95-cpp-input  -I/usr/local/opt/isl014/include -L/usr/local/opt/isl014/lib
  FLAGS77 = -frecord-marker=4 
  OBJ = diskparams.o derived_types.o diskgravmjp.o user_forces.o user_initialisation.o mercury_MJP_1.8.o
 
