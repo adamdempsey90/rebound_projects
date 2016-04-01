@@ -1,0 +1,9 @@
+#!/bin/bash
+#SBATCH -n 1
+#SBATCH -t 1000
+#SBATCH -p serial_requeue
+#SBATCH --mem=1000
+#SBATCH --output=/n/home13/matthewjohnpayne/matthewjohnpayne_panlfs/mercury_model40_BenNelson/run_3020132/EXTENSION_NO_DAMPING/SLURM_FILE.txt_SLURM_OUT
+#SBATCH --output=/n/home13/matthewjohnpayne/matthewjohnpayne_panlfs/mercury_model40_BenNelson/run_3020132/EXTENSION_NO_DAMPING/SLURM_FILE.txt_SLURM_ERR
+/n/home13/matthewjohnpayne/matthewjohnpayne_panlfs/mercury_model40_BenNelson/run_3020132/EXTENSION_NO_DAMPING/./mercury > /n/home13/matthewjohnpayne/matthewjohnpayne_panlfs/mercury_model40_BenNelson/run_3020132/EXTENSION_NO_DAMPING/SLURM_FILE.txt_CRAP.txt
+/n/home13/matthewjohnpayne/matthewjohnpayne_panlfs/mercury_model40_BenNelson/run_3020132/EXTENSION_NO_DAMPING/./element 
