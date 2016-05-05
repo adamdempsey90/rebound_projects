@@ -16,7 +16,7 @@
  allow collisions to occur = yes
  include collisional fragmentation = no
  express time in days or years = years
- express time relative to integration start time = no
+ express time relative to integration start time = yes
  output precision = medium
  < not used at present >
  include relativity in integration= no
