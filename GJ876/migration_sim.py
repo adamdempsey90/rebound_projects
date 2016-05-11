@@ -130,7 +130,7 @@ class Results():
         self.ta_vals = self.ta_vals[ind]
 
         return
-    def plot(self,fig=None,axes=None,fname=None,lap_lim=None,tstr):
+    def plot(self,fig=None,axes=None,fname=None,lap_lim=None,tstr=None):
         if axes is None:
             fig,axes=plt.subplots(7,1,sharex=True,figsize=(10,15))
 
@@ -236,7 +236,7 @@ class Results():
         with open(fname,'wb') as f:
             np.array([float(len(self.times)),float(self.npart)]).tofile(f)
             np.array([float(self.collision),float(self.ejection)]).tofile(f)
-            np.array([self.tend,float(self.tau_e),float(self.K),self.dt,float(self.integrator_i)]).tofile(f)
+            np.array([self.tend,float(self.tau_e),float(self.tau_a),self.dt,float(self.integrator_i)]).tofile(f)
             self.times.tofile(f)
             self.megno.tofile(f)
             self.lyap.tofile(f)
@@ -255,7 +255,7 @@ class Results():
         return
     def read_state(self,fname='results.dat'):
         dat = np.fromfile(fname)
-        nt,npart,collision,ejection,self.tend,self.tau_e,self.K,self.dt,self.integrator_i= dat[:9]
+        nt,npart,collision,ejection,self.tend,self.tau_e,self.tau_a,self.dt,self.integrator_i= dat[:9]
         npart = int(npart)
         nt = int(nt)
         self.collision = bool(collision)
@@ -370,13 +370,13 @@ def a_stop(sim,t):
         return True
     return False
 
-def run_constant_damping(sim,res,times,tau_e=1e2,K=1e1,chaos=False,stopping_criterion=mmr_stop,direct=False):
+def run_constant_damping(sim,res,times,tau_e=1e2,tau_a=1e3,chaos=False,stopping_criterion=mmr_stop,direct=False):
     rebx = rbx.Extras(sim)
     if direct:
         params = rebx.add_modify_orbits_direct()
     else:
         params = rebx.add_modify_orbits_forces()
-    sim.particles[3].tau_a = -tau_e * K
+    sim.particles[3].tau_a = -tau_a
     sim.particles[3].tau_e = -tau_e
 
     res = run_sim(sim,res,times,chaos=chaos,stopping_criterion=stopping_criterion)
@@ -384,13 +384,14 @@ def run_constant_damping(sim,res,times,tau_e=1e2,K=1e1,chaos=False,stopping_crit
     return res
 
 def evolve(planets,**params):
-    times = np.linspace(0,30*params['K']*params['tau_e'],1e3)
+    times = np.linspace(0,30*params['tau_a'],1e3)
     sim = set_sim(planets,integrator=params['integrator'],dt=params['dt'])
     res = Results(times,**params)
-    res = run_constant_damping(sim,res,times,stopping_criterion=mmr_stop,chaos=False)
+    res = run_constant_damping(sim,res,times,tau_e=params['tau_e'],tau_a=params['tau_a'],
+            direct=params['direct'],stopping_criterion=mmr_stop,chaos=False)
     sim.particles[3].tau_a = np.infty
     sim.particles[3].tau_e= np.infty
-    times1 = np.linspace(sim.t+sim.dt,sim.t+1e4,1e3)
+    times1 = np.linspace(sim.t+sim.dt,sim.t+1e1*params['tau_a'],1e3)
     res1 = Results(times1,**params)
     res1 = run_sim(sim,res1,times1,chaos=True)
 
