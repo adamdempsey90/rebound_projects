@@ -65,6 +65,8 @@ class Results():
             self.pvals = np.zeros((len(times),npart))
             self.lapvals = np.zeros(times.shape)
             self.dtvals = np.zeros(times.shape)
+            self.ta_vals= np.inf*np.ones(times.shape)
+            self.te_vals = np.inf*np.ones(times.shape)
             self.tend=times[-1]
             self.collision = False
             self.ejection = False
@@ -87,6 +89,9 @@ class Results():
         self.lyap[0] = res_old.lyap[-1]
         self.energy[0] = res_old.energy[-1]
         self.dtvals[0] = res_old.dtvals[-1]
+        self.ta_vals[0] = res_old.tau_a[-1]
+        self.te_vals[0] = res_old.tau_e[-1]
+
         return
     def update(self,sim,i,chaos=False):
 
@@ -105,6 +110,9 @@ class Results():
 
         self.energy[i] = sim.calculate_energy()
         self.dtvals[i] = sim.dt
+        self.te_vals[i] = ps[3].tau_e if ps[3].tau_e is not np.nan else np.inf
+        self.ta_vals[i] = ps[3].tau_a if ps[3].tau_a is not np.nan else np.inf
+
         return
     def cut(self):
         ind = self.times <= self.tend
@@ -118,9 +126,11 @@ class Results():
         self.dtvals = self.dtvals[ind]
         self.megno = self.megno[ind]
         self.lyap = self.lyap[ind]
+        self.te_vals = self.te_vals[ind]
+        self.ta_vals = self.ta_vals[ind]
 
         return
-    def plot(self,fig=None,axes=None,fname=None,lap_lim=None):
+    def plot(self,fig=None,axes=None,fname=None,lap_lim=None,tstr):
         if axes is None:
             fig,axes=plt.subplots(7,1,sharex=True,figsize=(10,15))
 
@@ -153,14 +163,11 @@ class Results():
         axl.plot(self.times[ind],mod_pi(self.lapvals[ind])*180./np.pi)
 
         axE.plot(self.times[ind],abs((self.energy-self.energy[0])/self.energy[0])[ind])
-        #axE.set_yscale('log')
         axmeg2.plot(self.times[ind],self.megno[ind])
 
-        #axmeg.plot(times[ind],1/lyap[ind])
         axmeg.plot(self.times[ind], ( 1/self.lyap )) # /(self.tau_e * self.K)) #/self.sim.tau_e)
         axper.plot(self.times[ind],self.pvals[ind,2]/self.pvals[ind,1],'-b',label='$P_3/P_2$')
         axper.plot(self.times[ind],self.pvals[ind,1]/self.pvals[ind,0],'-g', label='$P_2/P_1$')
-       # axper.plot(self.times[ind],self.pvals[ind,2]/self.pvals[ind,0],'-r',label='$P_3/P_1$')
         axa.set_ylabel('a',fontsize=15)
         axe.set_ylabel('e',fontsize=15)
         axl.set_ylabel('$|\\phi_{Laplace}|$',fontsize=15)
@@ -169,35 +176,24 @@ class Results():
         axmeg.set_ylabel('$\\tau_{lyap}(yrs)$',fontsize=15)
         axes[-1].set_xlabel('t (yrs)',fontsize=15)
         axper.legend(loc='upper right')
-      #  axper.axhline(4,color='k')
         axper.axhline(2,color='k')
         if lap_lim is not None:
             axl.set_ylim(-20,20)
 
         axmeg2.set_ylabel('MEGNO',fontsize=15)
-        #axdt.plot(self.times[ind],self.dtvals[ind])
-        #axdt.plot(self.times[ind], self.pvals[ind,0] * (1-self.evals[ind,0])**(1.5) / 10,'--k',linewidth=3)
-        #axdt.set_ylabel('$\\Delta t$')
-        #axes[2].set_yscale('log')
-        #axes[0].set_ylim(0,1)
-        #axes[4].set_ylim(1,3)
         for ax in axes:
             ax.minorticks_on()
 
-        #axes[0].set_xscale('log')
+        if tstr is not None:
+            axes[0].set_title(tstr,fontsize=15)
         if fname is not None:
             fig.savefig(fname)
         return
 
     def plot_laplace(self):
-#         if self.times[-1] < self.stage_two_time:
-#             print 'Simulation never got past stage two!'
-#             return
-#        ind2 = (self.times<=self.tend)&(self.times>self.stage_two_time)
         ind2 = (self.times<=self.tend)
         t2 = self.times[ind2]
 
-        #vals = np.abs(self.lapvals[ind2]-np.pi)
         vals = mod_pi(self.lapvals[ind2])*180./np.pi
         lp_mean =np.array([vals[t2<=x].mean() for x in t2])
         lp_std = np.array([vals[t2<=x].std() for x in t2])
@@ -252,6 +248,8 @@ class Results():
             self.pvals.tofile(f)
             self.lapvals.tofile(f)
             self.dtvals.tofile(f)
+            self.te_vals.tofile(f)
+            self.ta_vals.tofile(f)
 
 
         return
@@ -291,8 +289,11 @@ class Results():
         dat = dat[nt:]
         self.dtvals = dat[:nt]
         dat = dat[nt:]
+        self.te_vals = dat[:nt]
+        dat = dat[nt:]
 
-
+        self.ta_vals = dat[:nt]
+        dat = dat[nt:]
 
 
         return
@@ -310,7 +311,10 @@ def set_sim(init_params,dt=.02,integrator='WHFast'):
     sim.move_to_com()
     sim.integrator = integrator
     ps = sim.particles
-    sim.dt = dt #2*np.pi/ps[1].n * (1-ps[1].e)**(1.5) / 10
+    if integrator == 'WHFast':
+        sim.dt = 2*np.pi/ps[1].n * (1-ps[1].e)**(1.5) / 20
+    else:
+        sim.dt = dt
     sim.exit_max_distance = 5.
     sim.exit_min_distance = 3 * ps[2].a*np.sqrt(ps[2].m/3)
 
@@ -391,6 +395,13 @@ def evolve(planets,**params):
     res1 = run_sim(sim,res1,times1,chaos=True)
 
     return res,res1,sim
+
+def para_evolve(args):
+    planets = args[0]
+    params = args[1]
+    print 'dt = ',params['dt']
+    res,res1,sim = evolve(planets,**params)
+    return (res,res1)
 
 def run_changing_damping(sim,res,times):
     ps = sim.particles
