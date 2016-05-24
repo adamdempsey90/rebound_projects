@@ -49,7 +49,7 @@ for ta in ta_vals:
         for d in direct:
             args.append((ta,te,d))
 
-pool = rb.InterruptiblePool(4)
+pool = rb.InterruptiblePool()
 pool.map(pevolve,args)
 print 'Finished'
 

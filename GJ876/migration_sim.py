@@ -57,9 +57,8 @@ class Results():
             self.npart = npart
             self.megno = np.zeros(times.shape)
             self.lyap = np.zeros(times.shape)
-            self.energy = np.zeros(times.shape)
+            self.energy = np.zferos(times.shape)
             self.avals = np.zeros((len(times),npart))
-            self.avalsf = np.zeros((len(times),npart))
             self.evals = np.zeros((len(times),npart))
             self.ivals = np.zeros((len(times),npart))
             self.pvals = np.zeros((len(times),npart))
@@ -70,6 +69,7 @@ class Results():
             self.tend=times[-1]
             self.collision = False
             self.ejection = False
+            self.restart_params = init_pars.copy()
             for key,val in init_pars.items():
                 setattr(self,key,val)
 
@@ -148,6 +148,12 @@ class Results():
         axa.plot(self.times[ind],self.avals[ind,0],'-b',
                  self.times[ind],self.avals[ind,1],'-g',
                  self.times[ind],self.avals[ind,2],'-r')
+        axa.fill_between(self.times[ind],self.avals[ind,0]*(1-self.evals[ind,0]),
+                self.avals[ind,0]*(1+self.evals[ind,0]),color='b',alpha=.2)
+        axa.fill_between(self.times[ind],self.avals[ind,1]*(1-self.evals[ind,1]),
+                self.avals[ind,1]*(1+self.evals[ind,1]),color='g',alpha=.2)
+        axa.fill_between(self.times[ind],self.avals[ind,2]*(1-self.evals[ind,2]),
+                self.avals[ind,2]*(1+self.evals[ind,2]),color='r',alpha=.2)
         axa.axhline(.349,color='r',linestyle='--')
         axa.axhline(.2186,color='g',linestyle='--')
         axa.axhline(.13598,color='b',linestyle='--')
@@ -160,7 +166,7 @@ class Results():
         axe.axhline(.038,color='g',linestyle='--')
         axe.axhline(.252,color='b',linestyle='--')
 
-        axl.plot(self.times[ind],mod_pi(self.lapvals[ind])*180./np.pi)
+        axl.plot(self.times[ind],mod_pi(self.lapvals[ind])*180./np.pi,'.')
 
         axE.plot(self.times[ind],abs((self.energy-self.energy[0])/self.energy[0])[ind])
         axmeg2.plot(self.times[ind],self.megno[ind])
@@ -242,7 +248,6 @@ class Results():
             self.lyap.tofile(f)
             self.energy.tofile(f)
             self.avals.tofile(f)
-            self.avalsf.tofile(f)
             self.evals.tofile(f)
             self.ivals.tofile(f)
             self.pvals.tofile(f)
@@ -276,24 +281,41 @@ class Results():
         dat = dat[nt:]
         self.avals = dat[:nt*npart].reshape((nt,npart))
         dat = dat[nt*npart:]
-        self.avalsf = dat[:nt*npart].reshape((nt,npart))
-        dat = dat[nt*npart:]
-        self.evals = dat[:nt*npart].reshape((nt,npart))
-        dat = dat[nt*npart:]
-        self.ivals = dat[:nt*npart].reshape((nt,npart))
-        dat = dat[nt*npart:]
-        self.pvals = dat[:nt*npart].reshape((nt,npart))
-        dat = dat[nt*npart:]
+        # avalsf
+        self.ta_vals = dat[-nt:]
+        dat = dat[:-nt]
 
-        self.lapvals = dat[:nt]
-        dat = dat[nt:]
-        self.dtvals = dat[:nt]
-        dat = dat[nt:]
-        self.te_vals = dat[:nt]
-        dat = dat[nt:]
+        self.te_vals = dat[-nt:]
+        dat = dat[:-nt]
 
-        self.ta_vals = dat[:nt]
-        dat = dat[nt:]
+        self.dtvals = dat[-nt:]
+        dat = dat[:-nt]
+        self.lapvals = dat[-nt:]
+        dat = dat[:-nt]
+        self.pvals = dat[-nt*npart:].reshape((nt,npart))
+        dat = dat[:-nt*npart]
+        self.ivals = dat[-nt*npart:].reshape((nt,npart))
+        dat = dat[:-nt*npart]
+        self.evals = dat[-nt*npart:].reshape((nt,npart))
+        dat = dat[:-nt*npart]
+
+
+        #self.evals = dat[:nt*npart].reshape((nt,npart))
+        #dat = dat[nt*npart:]
+        #self.ivals = dat[:nt*npart].reshape((nt,npart))
+        #dat = dat[nt*npart:]
+        #self.pvals = dat[:nt*npart].reshape((nt,npart))
+        #dat = dat[nt*npart:]
+
+        #self.lapvals = dat[:nt]
+        #dat = dat[nt:]
+        #self.dtvals = dat[:nt]
+        #dat = dat[nt:]
+        #self.te_vals = dat[:nt]
+        #dat = dat[nt:]
+
+        #self.ta_vals = dat[:nt]
+        #dat = dat[nt:]
 
 
         return
@@ -371,6 +393,10 @@ def a_stop(sim,t):
     return False
 
 def run_constant_damping(sim,res,times,tau_e=1e2,tau_a=1e3,chaos=False,stopping_criterion=mmr_stop,direct=False):
+    tau_a = res.tau_a
+    tau_e = res.tau_e
+    res.direct = res.direct
+
     rebx = rbx.Extras(sim)
     if direct:
         params = rebx.add_modify_orbits_direct()
