@@ -57,7 +57,7 @@ class Results():
             self.npart = npart
             self.megno = np.zeros(times.shape)
             self.lyap = np.zeros(times.shape)
-            self.energy = np.zferos(times.shape)
+            self.energy = np.zeros(times.shape)
             self.avals = np.zeros((len(times),npart))
             self.evals = np.zeros((len(times),npart))
             self.ivals = np.zeros((len(times),npart))
